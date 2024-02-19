@@ -1,11 +1,11 @@
 from flask import jsonify, request
-from app import app, db
+from app import db
 from app.models import Customer, Order
 from flask import Blueprint, redirect, request, url_for, session, jsonify
 from auth0.authentication import GetToken
 from auth0.management import Auth0
 
-from app import app
+from run import run
 
 bp = Blueprint('routes', __name__)
 
