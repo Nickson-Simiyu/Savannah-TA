@@ -1,5 +1,6 @@
 from app import db
 
+
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
@@ -11,3 +12,4 @@ class Order(db.Model):
     item = db.Column(db.String(100))
     amount = db.Column(db.Float)
     time = db.Column(db.DateTime)
+

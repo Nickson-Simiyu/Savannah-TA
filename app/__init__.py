@@ -3,14 +3,16 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 
-# Load environment variables
-load_dotenv()
-
 # Initialize SQLAlchemy database
 db = SQLAlchemy()
 
 def create_app():
+    # Initialize Flask application instance
     app = Flask(__name__)
+
+    # Load environment variables from .env file
+    load_dotenv()
+    print("DATABASE_URL from environment:", os.getenv('DATABASE_URL'))
 
     # Load configuration from config.py
     parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -29,3 +31,4 @@ def create_app():
     app.register_blueprint(routes_bp)
 
     return app
+
