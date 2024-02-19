@@ -26,3 +26,4 @@ db = SQLAlchemy(app)
 
 # Import routes and models
 from app import routes, models
+from  .routes import bp as routes_bp
