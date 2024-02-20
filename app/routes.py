@@ -30,7 +30,7 @@ def index():
 @bp.route('/login')
 def login():
     redirect_uri = url_for('routes.callback', _external=True)
-    return oauth.auth0.authorize_redirect(redirect_uri)
+    return oauth.auth0.authorize_redirect(redirect_uri='http://localhost:5000/callback')
 
 @bp.route('/callback')
 def callback():
