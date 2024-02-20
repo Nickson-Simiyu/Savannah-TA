@@ -6,6 +6,7 @@ import os
 # Initialize SQLAlchemy database
 db = SQLAlchemy()
 
+
 def create_app():
     # Initialize Flask application instance
     app = Flask(__name__)
@@ -19,6 +20,7 @@ def create_app():
     config_path = os.path.join(parent_dir, 'config.py')
     app.config.from_pyfile(config_path)
 
+
     # Configure SQLAlchemy database URI from environment variable
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -31,4 +33,3 @@ def create_app():
     app.register_blueprint(routes_bp)
 
     return app
-

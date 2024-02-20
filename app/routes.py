@@ -1,54 +1,60 @@
-from flask import jsonify, request
+from flask import Blueprint, redirect, request, url_for, session, jsonify, Flask
 from app import db
 from app.models import Customer, Order
-from flask import Blueprint, redirect, request, url_for, session, jsonify
 from auth0.authentication import GetToken
 from auth0.management import Auth0
-
-from run import run
+from authlib.integrations.flask_client import OAuth
+from config import SECRET_KEY, DATABASE_URL, SQLALCHEMY_TRACK_MODIFICATIONS, AFRICAS_TALKING_API_KEY, AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTHORIZE_URL
 
 bp = Blueprint('routes', __name__)
 
-# Initialize Auth0 SDK
-auth0_domain = app.config.get('AUTH0_DOMAIN')
-client_id = app.config.get('AUTH0_CLIENT_ID')
-client_secret = app.config.get('AUTH0_CLIENT_SECRET')
-auth0 = Auth0(auth0_domain, client_id, client_secret)
-get_token = GetToken(auth0_domain)
+app = Flask(__name__)
+oauth = OAuth(app)
 
-# Route to login
+# Configure OAuth with Auth0 endpoints
+oauth.register(
+    name='auth0',
+    client_id=AUTH0_CLIENT_ID,
+    client_secret=AUTH0_CLIENT_SECRET,
+    authorize_url=AUTHORIZE_URL,
+    access_token_url='https://dev-dvk7bu07pum1d5h0.us.auth0.com/oauth/token',
+    client_kwargs={
+        'scope': 'openid profile email',
+    },
+)
+
+@app.route('/')
+def index():
+    return 'Welcome to the index page'
+
 @bp.route('/login')
 def login():
-    return redirect(get_token.authorization_url(redirect_uri='http://localhost:5000/callback'))
+    redirect_uri = url_for('routes.callback', _external=True)
+    return oauth.auth0.authorize_redirect(redirect_uri)
 
-# Route to handle callback
 @bp.route('/callback')
 def callback():
-    code = request.args.get('code')
-    token_info = get_token.exchange(authorization_code=code, redirect_uri='http://localhost:5000/callback')
-    session['access_token'] = token_info['access_token']
-    return redirect(url_for('profile'))
+    token = oauth.auth0.authorize_access_token()
+    userinfo = oauth.auth0.parse_id_token(token)
+    session['access_token'] = token['access_token']
+    return redirect(url_for('routes.profile'))
 
-# Route to display user profile
 @bp.route('/profile')
 def profile():
     access_token = session.get('access_token')
     if not access_token:
-        return redirect(url_for('login'))
+        return redirect(url_for('routes.login'))
 
-    userinfo = auth0.users.get('me')
-    return f'Hello, {userinfo["name"]}'
+    userinfo = oauth.auth0.get('userinfo')
+    return f'Hello, {userinfo.json()["name"]}'
 
-# Route to logout
 @bp.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('index'))
-
-
+    return redirect(url_for('routes.index'))
 
 # Route to add a new customer
-@app.route('/customers', methods=['POST'])
+@bp.route('/customers', methods=['POST'])
 def add_customer():
     data = request.json
     new_customer = Customer(name=data['name'], code=data['code'])
@@ -57,10 +63,16 @@ def add_customer():
     return jsonify({'message': 'Customer added successfully'})
 
 # Route to add a new order
-@app.route('/orders', methods=['POST'])
+@bp.route('/orders', methods=['POST'])
 def add_order():
     data = request.json
     new_order = Order(customer_id=data['customer_id'], item=data['item'], amount=data['amount'], time=data['time'])
     db.session.add(new_order)
     db.session.commit()
     return jsonify({'message': 'Order added successfully'})
+
+# Register blueprint with Flask app
+app.register_blueprint(bp)
+
+if __name__ == '__main__':
+    app.run(debug=True)
