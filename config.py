@@ -9,4 +9,6 @@ AUTH0_DOMAIN = os.environ.get('AUTH0_DOMAIN')
 AUTH0_CLIENT_ID = os.environ.get('AUTH0_CLIENT_ID')
 AUTH0_CLIENT_SECRET = os.environ.get('AUTH0_CLIENT_SECRET')
 AUTHORIZE_URL='https://dev-dvk7bu07pum1d5h0.us.auth0.com/authorize'
+ACCESS_TOKEN_URL='https://dev-dvk7bu07pum1d5h0.us.auth0.com/oauth/token',
+
 
