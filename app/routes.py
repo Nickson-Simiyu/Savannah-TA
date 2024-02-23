@@ -4,13 +4,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
 from app.models import Customer, Order
 from app import db
-from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL
+from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL, AFRICAS_TALKING_API_KEY
+import africastalking
 import os
 
 app = Flask(__name__)
 
 bp = Blueprint('routes', __name__)
 
+# Implement authentication and authorization via OpenID Connect
 login_manager = LoginManager(app)
 
 class User(UserMixin, db.Model):
@@ -68,18 +70,40 @@ def logout():
     session.clear()
     return redirect(url_for('routes.login'))
 
-@bp.route('/customers', methods=['POST'])
-def add_customer():
-    data = request.json
-    new_customer = Customer(name=data['name'], code=data['code'])
-    db.session.add(new_customer)
-    db.session.commit()
-    return jsonify({'message': 'Customer added successfully'})
 
+# When an order is added, send the customer an SMS alerting them
+
+username = "NICKSON SIMIYU"
+api_key = AFRICAS_TALKING_API_KEY
+africastalking.initialize(username, api_key)
+sms = africastalking.SMS
+
+# Endpoint for adding a new order
 @bp.route('/orders', methods=['POST'])
+@login_required  # Require authentication to access this endpoint
 def add_order():
+    # Extract order data from request JSON
     data = request.json
-    new_order = Order(customer_id=data['customer_id'], item=data['item'], amount=data['amount'], time=data['time'])
+    customer_id = data.get('customer_id')
+    item = data.get('item')
+    amount = data.get('amount')
+    time = data.get('time')
+
+    # Create a new order object and add it to the database
+    new_order = Order(customer_id=customer_id, item=item, amount=amount, time=time)
     db.session.add(new_order)
     db.session.commit()
+
+    # Retrieve customer's phone number from the database
+    customer = Customer.query.get(customer_id)
+    phone_number = customer.phone_number 
+
+    # Send SMS alert to the customer
+    message = f"Hello {customer.name}, your order for {item} has been successfully placed."
+    try:
+        response = sms.send(message, [phone_number])
+        print(response)
+    except Exception as e:
+        print(f"Failed to send SMS: {e}")
+
     return jsonify({'message': 'Order added successfully'})
