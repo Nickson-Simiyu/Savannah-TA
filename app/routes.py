@@ -1,95 +1,74 @@
 from flask import Blueprint, redirect, request, url_for, session, jsonify, Flask
-from flask_login import login_user
-from app import db
-from app.models import Customer, Order
-from auth0.authentication import GetToken
-from auth0.management import Auth0
-from authlib.integrations.base_client.errors import OAuthError
-from authlib.integrations.requests_client import OAuth2Session
+from flask_login import login_user, UserMixin, LoginManager, logout_user, login_required
+from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
-from config import SECRET_KEY, DATABASE_URL, SQLALCHEMY_TRACK_MODIFICATIONS, AFRICAS_TALKING_API_KEY, AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTHORIZE_URL, ACCESS_TOKEN_URL
-import secrets
+from app.models import Customer, Order
+from app import db
+from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL
+import os
+
+app = Flask(__name__)
 
 bp = Blueprint('routes', __name__)
 
-app = Flask(__name__)
+login_manager = LoginManager(app)
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+
+    def __init__(self, username, email, password):
+        self.username = username
+        self.email = email
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User()
+
 oauth = OAuth(app)
 
-
-# Configure OAuth with Auth0 endpoints
-oauth.register(
+auth0 = oauth.register(
     name='auth0',
     client_id=AUTH0_CLIENT_ID,
     client_secret=AUTH0_CLIENT_SECRET,
+    jwks_uri=JWKS_URI,
     authorize_url=AUTHORIZE_URL,
     access_token_url=ACCESS_TOKEN_URL,
-    client_kwargs={
-        'scope': 'openid profile email',
-    },
+    client_kwargs={'scope': 'openid profile email'}
 )
 
-
-@app.route('/')
+@bp.route('/')
 def index():
-    return 'Welcome to the index page'
+    return "Hello World with Flask"
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
-    # Generate a random state parameter
-    state = secrets.token_urlsafe(16)
-    
-    # Store the state parameter in the session
+    state = os.urandom(16).hex()
     session['state'] = state
-    
-    redirect_uri = url_for('routes.callback', _external=True)
-    return oauth.auth0.authorize_redirect(redirect_uri=redirect_uri, state=state)
+    return oauth.auth0.authorize_redirect(redirect_uri='http://localhost:5000/callback', state=state)
 
 @bp.route('/callback')
 def callback():
-    # Ensure CSRF protection by checking state parameter
-    received_state = request.args.get('state')
-    expected_state = session.get('state')
-
-    if received_state is None or received_state != expected_state:
-        return f'Invalid state parameter. Received: {received_state}, Expected: {expected_state}', 400
-
-    # Exchange authorization code for access token
     code = request.args.get('code')
-    if code is None:
-        return 'Authorization code is missing', 400
-
-    # Fetch token using access_token_url registered during OAuth configuration
-    token = oauth.auth0._fetch_token(token_url=oauth.auth0.access_token_url, code=code)
-
-    # Store access token or process as needed
-    session['access_token'] = token['access_token']
-
-    # Redirect to a protected resource or profile page
+    token_info = auth0.authorize_access_token()
+    session['access_token'] = token_info['access_token']
     return redirect('/')
 
 
-
-
-
-
-
-
-@bp.route('/profile', methods=['GET', 'POST'])
-def profile():
-    access_token = session.get('access_token')
-    if not access_token:
-        return redirect(url_for('routes.login'))
-
-    userinfo = oauth.auth0.get('userinfo')
-    return f'Hello, {userinfo.json()["name"]}'
-
 @bp.route('/logout')
+@login_required
 def logout():
     session.clear()
-    return redirect(url_for('routes.index'))
+    return redirect(url_for('routes.login'))
 
-# Route to add a new customer
-@bp.route('/customers', methods=['GET', 'POST'])
+@bp.route('/customers', methods=['POST'])
 def add_customer():
     data = request.json
     new_customer = Customer(name=data['name'], code=data['code'])
@@ -97,17 +76,10 @@ def add_customer():
     db.session.commit()
     return jsonify({'message': 'Customer added successfully'})
 
-# Route to add a new order
-@bp.route('/orders', methods=['GET', 'POST'])
+@bp.route('/orders', methods=['POST'])
 def add_order():
     data = request.json
     new_order = Order(customer_id=data['customer_id'], item=data['item'], amount=data['amount'], time=data['time'])
     db.session.add(new_order)
     db.session.commit()
     return jsonify({'message': 'Order added successfully'})
-
-# Register blueprint with Flask app
-app.register_blueprint(bp)
-
-if __name__ == '__main__':
-    app.run(debug=True)

@@ -1,11 +1,9 @@
 from flask import Flask
 from app import create_app
+from config  import SECRET_KEY
 
 app = create_app()
-
-@app.route('/')
-def index():
-    return "Hello World with flask"
+app.secret_key = SECRET_KEY
 
 
 if __name__ == '__main__':

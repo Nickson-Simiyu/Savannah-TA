@@ -6,20 +6,16 @@ import os
 # Initialize SQLAlchemy database
 db = SQLAlchemy()
 
-
 def create_app():
-    # Initialize Flask application instance
     app = Flask(__name__)
 
     # Load environment variables from .env file
     load_dotenv()
-    print("DATABASE_URL from environment:", os.getenv('DATABASE_URL'))
 
     # Load configuration from config.py
     parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
     config_path = os.path.join(parent_dir, 'config.py')
     app.config.from_pyfile(config_path)
-
 
     # Configure SQLAlchemy database URI from environment variable
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
