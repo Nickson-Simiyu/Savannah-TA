@@ -36,6 +36,8 @@ def load_user(user_id):
 
 @bp.route('/')
 def index():
+    if not session.get('access_token'):
+        return redirect('/login')
     return "Hello World with Flask"
 
 oauth = OAuth(app)
@@ -64,10 +66,9 @@ def callback():
     return redirect('/')
 
 @bp.route('/logout')
-@login_required
 def logout():
     session.clear()
-    return redirect(url_for('routes.login'))
+    return redirect('/login')
 
 
 # When an order is added, send the customer an SMS alerting them
