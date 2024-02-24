@@ -71,17 +71,21 @@ def logout():
 
 
 # When an order is added, send the customer an SMS alerting them
-
-username = "NICKSON SIMIYU"
-api_key = AFRICAS_TALKING_API_KEY
-africastalking.initialize(username, api_key)
-sms = africastalking.SMS
+@bp.route('/sms_callback', methods=['POST'])
+def sms_callback():
+    print(request.method)
+    print(request.form)
+    if 'from' in request.form:
+        sender = request.form['from']
+        print(f"SMS received from: {sender}")
+    else:
+        print("No 'from' key found in form data")
+    return "Success", 201
 
 # Endpoint for adding a new order
 @bp.route('/orders', methods=['POST'])
-@login_required  # Require authentication to access this endpoint
+@login_required
 def add_order():
-    # Extract order data from request JSON
     data = request.json
     customer_id = data.get('customer_id')
     item = data.get('item')
@@ -102,7 +106,7 @@ def add_order():
     try:
         response = sms.send(message, [phone_number])
         print(response)
+        return jsonify({'message': 'Order added successfully and SMS sent'})
     except Exception as e:
         print(f"Failed to send SMS: {e}")
-
-    return jsonify({'message': 'Order added successfully'})
+        return jsonify({'message': 'Order added successfully, but failed to send SMS'}), 500
