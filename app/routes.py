@@ -34,6 +34,10 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User()
 
+@bp.route('/')
+def index():
+    return "Hello World with Flask"
+
 oauth = OAuth(app)
 
 auth0 = oauth.register(
@@ -45,10 +49,6 @@ auth0 = oauth.register(
     access_token_url=ACCESS_TOKEN_URL,
     client_kwargs={'scope': 'openid profile email'}
 )
-
-@bp.route('/')
-def index():
-    return "Hello World with Flask"
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -62,7 +62,6 @@ def callback():
     token_info = auth0.authorize_access_token()
     session['access_token'] = token_info['access_token']
     return redirect('/')
-
 
 @bp.route('/logout')
 @login_required
