@@ -72,6 +72,10 @@ def logout():
 
 
 # When an order is added, send the customer an SMS alerting them
+
+africastalking.initialize(username='sandbox', api_key=AFRICAS_TALKING_API_KEY)
+sms = africastalking.SMS
+
 @bp.route('/sms_callback', methods=['POST'])
 def sms_callback():
     print(request.method)
