@@ -1,25 +1,34 @@
 from flask_sqlalchemy import SQLAlchemy
+from flask import Flask
 from flask_login import UserMixin
+from config import SQLALCHEMY_DATABASE_URI
+from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash, check_password_hash
 
+
+app = Flask(__name__)
 db = SQLAlchemy()
+migrate = Migrate(app, db)
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
+db.init_app(app)
 
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     code = db.Column(db.String(20))
-
-class Order(db.Model):
+    phone_number = db.Column(db.String(20))
+class CustomerOrder(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'))
-    item = db.Column(db.String(100))
-    amount = db.Column(db.Float)
-    time = db.Column(db.DateTime)
+    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    item = db.Column(db.String(255), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    time = db.Column(db.DateTime, nullable=False)
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
 
     def __init__(self, username, email, password):
         self.username = username

@@ -1,25 +1,26 @@
-from flask import Blueprint, redirect, request, url_for, session, jsonify, Flask
-from flask_login import login_user, UserMixin, LoginManager, logout_user, login_required
+from flask import Blueprint, redirect, request, url_for, session, jsonify, Flask, render_template
+from flask_login import login_user, UserMixin, LoginManager, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
-from app.models import Customer, Order
+from flask_sqlalchemy import SQLAlchemy
+from app.models import Customer, CustomerOrder
 from app import db
-from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL, AFRICAS_TALKING_API_KEY
+from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL, AFRICAS_TALKING_API_KEY, SQLALCHEMY_DATABASE_URI
 import africastalking
 import os
 
 app = Flask(__name__)
 
+
 bp = Blueprint('routes', __name__)
 
 # Implement authentication and authorization via OpenID Connect
 login_manager = LoginManager(app)
-
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
 
     def __init__(self, username, email, password):
         self.username = username
@@ -63,7 +64,7 @@ def callback():
     code = request.args.get('code')
     token_info = auth0.authorize_access_token()
     session['access_token'] = token_info['access_token']
-    return redirect('/')
+    return redirect('/order')
 
 @bp.route('/logout')
 def logout():
@@ -71,25 +72,27 @@ def logout():
     return redirect('/login')
 
 
-# When an order is added, send the customer an SMS alerting them
-
+# Initialize Africa's Talking SMS
 africastalking.initialize(username='sandbox', api_key=AFRICAS_TALKING_API_KEY)
 sms = africastalking.SMS
+
+
+@bp.route('/order')
+def show_order_form():
+    return render_template('order.html')
 
 @bp.route('/sms_callback', methods=['POST'])
 def sms_callback():
     print(request.method)
     print(request.form)
     if 'from' in request.form:
-        sender = request.form['from']
+        sender = request.form['Nickson']
         print(f"SMS received from: {sender}")
     else:
         print("No 'from' key found in form data")
     return "Success", 201
 
-# Endpoint for adding a new order
 @bp.route('/orders', methods=['POST'])
-@login_required
 def add_order():
     data = request.json
     customer_id = data.get('customer_id')
@@ -97,8 +100,7 @@ def add_order():
     amount = data.get('amount')
     time = data.get('time')
 
-    # Create a new order object and add it to the database
-    new_order = Order(customer_id=customer_id, item=item, amount=amount, time=time)
+    new_order = CustomerOrder(customer_id=customer_id, item=item, amount=amount, time=time)
     db.session.add(new_order)
     db.session.commit()
 
