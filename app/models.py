@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
 from flask_login import UserMixin
 from config import SQLALCHEMY_DATABASE_URI
+from sqlalchemy import create_engine
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -12,17 +13,21 @@ migrate = Migrate(app, db)
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 db.init_app(app)
 
+engine = create_engine(
+    "postgresql+psycopg2://postgres:mombasa123@localhost:5432/savannah", pool_size=20, max_overflow=0
+)
+
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     code = db.Column(db.String(20))
     phone_number = db.Column(db.String(20))
 class CustomerOrder(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False)
+    customer_id = db.Column(db.Integer, primary_key=True)  # Change primary_key to False
     item = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     time = db.Column(db.DateTime, nullable=False)
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

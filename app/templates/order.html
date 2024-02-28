@@ -7,7 +7,7 @@
 </head>
 <body>
     <h1>Place an Order</h1>
-    <form action="{{ url_for('.app.routes.orders') }}" method="post">
+    <form action="{{ url_for('routes.add_order') }}" method="post">
         <label for="phone_number">Phone Number:</label><br>
         <input type="text" id="phone_number" name="phone_number" required><br><br>
 
