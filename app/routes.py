@@ -16,20 +16,6 @@ bp = Blueprint('routes', __name__)
 
 # Implement authentication and authorization via OpenID Connect
 login_manager = LoginManager(app)
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-
-    def __init__(self, username, email, password):
-        self.username = username
-        self.email = email
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -100,15 +86,18 @@ def add_order():
     amount = data.get('amount')
     time = data.get('time')
 
+    # Check if the customer exists
+    customer = Customer.query.get(customer_id)
+    if not customer:
+        return jsonify({'message': 'Customer not found'}), 404
+
+    # Create the new order
     new_order = CustomerOrder(customer_id=customer_id, item=item, amount=amount, time=time)
     db.session.add(new_order)
     db.session.commit()
 
-    # Retrieve customer's phone number from the database
-    customer = Customer.query.get(customer_id)
-    phone_number = customer.phone_number 
-
     # Send SMS alert to the customer
+    phone_number = customer.phone_number 
     message = f"Hello {customer.name}, your order for {item} has been successfully placed."
     try:
         response = sms.send(message, [phone_number])
