@@ -67,42 +67,52 @@ sms = africastalking.SMS
 def show_order_form():
     return render_template('order.html')
 
-@bp.route('/sms_callback', methods=['POST'])
-def sms_callback():
-    print(request.method)
-    print(request.form)
-    if 'from' in request.form:
-        sender = request.form['Nickson']
-        print(f"SMS received from: {sender}")
-    else:
-        print("No 'from' key found in form data")
-    return "Success", 201
+#@bp.route('/sms_callback', methods=['POST'])
+#def sms_callback():
+#    print(request.method)
+#    print(request.form)
+#    if 'from' in request.form:
+#        sender = request.form['Nickson']
+#        print(f"SMS received from: {sender}")
+#    else:
+#        print("No 'from' key found in form data")
+#    return "Success", 201
 
 @bp.route('/orders', methods=['POST'])
 def add_order():
+    # Parse JSON data from the request
     data = request.json
     customer_id = data.get('customer_id')
     item = data.get('item')
     amount = data.get('amount')
     time = data.get('time')
 
+    # Validate required fields
+    if not all([customer_id, item, amount, time]):
+        return jsonify({'message': 'Missing required fields'}), 400
+
     # Check if the customer exists
     customer = Customer.query.get(customer_id)
     if not customer:
         return jsonify({'message': 'Customer not found'}), 404
 
-    # Create the new order
-    new_order = CustomerOrder(customer_id=customer_id, item=item, amount=amount, time=time)
-    db.session.add(new_order)
-    db.session.commit()
-
-    # Send SMS alert to the customer
-    phone_number = customer.phone_number 
-    message = f"Hello {customer.name}, your order for {item} has been successfully placed."
     try:
-        response = sms.send(message, [phone_number])
-        print(response)
-        return jsonify({'message': 'Order added successfully and SMS sent'})
+        # Create the new order
+        new_order = CustomerOrder(customer_id=customer_id, item=item, amount=amount, time=time)
+        db.session.add(new_order)
+        db.session.commit()
+
+        # Send SMS alert to the customer
+        phone_number = customer.phone_number
+        message = f"Hello {customer.name}, your order for {item} has been successfully placed."
+        response = africastalking.SMS.send(message, [phone_number])
+        print(response)  # Log the response from the SMS provider
+
+        # Handle delivery reports
+        data = request.get_json(force=True)
+        print(f'Delivery report response...\n {data}')
+        
+        return jsonify({'message': 'Order added successfully, SMS sent, and delivery report handled'})
     except Exception as e:
-        print(f"Failed to send SMS: {e}")
-        return jsonify({'message': 'Order added successfully, but failed to send SMS'}), 500
+        print(f"Failed to complete order process: {e}")  # Log the error if any part fails
+        return jsonify({'message': 'Failed to complete order process'}), 500
