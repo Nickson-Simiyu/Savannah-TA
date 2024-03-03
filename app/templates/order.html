@@ -7,7 +7,14 @@
 </head>
 <body>
     <h1>Place an Order</h1>
-    <form action="{{ url_for('routes.add_order') }}" method="post">
+    <form id="orderForm" action="/orders" method="post">
+
+        <label for="customer_id">ID Number:</label><br>
+        <input type="text" id="customer_id" name="customer_id" required><br><br>
+
+        <label for="name">Full Name:</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
         <label for="phone_number">Phone Number:</label><br>
         <input type="text" id="phone_number" name="phone_number" required><br><br>
 
@@ -20,7 +27,40 @@
         <label for="time">Time:</label><br>
         <input type="text" id="time" name="time" required><br><br>
 
-        <input type="submit" value="Place Order">
+        <input type="button" value="Place Order" onclick="submitOrder()">
     </form>
+
+    <script>
+        function submitOrder() {
+            var formData = {
+                phone_number: document.getElementById("phone_number").value,
+                item: document.getElementById("item").value,
+                amount: document.getElementById("amount").value,
+                time: document.getElementById("time").value
+            };
+
+            fetch("/orders", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to submit order");
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(data);
+                alert("Order placed successfully");
+            })
+            .catch(error => {
+                console.error(error);
+                alert("Failed to place order");
+            });
+        }
+    </script>
 </body>
 </html>

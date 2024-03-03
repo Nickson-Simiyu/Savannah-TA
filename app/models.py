@@ -11,15 +11,10 @@ engine = create_engine(
     "postgresql+psycopg2://postgres:mombasa123@localhost:5432/savannah", pool_size=20, max_overflow=0
 )
 
-class Customer(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    name = db.Column(db.String(100))
-    code = db.Column(db.String(20))
-    phone_number = db.Column(db.String(20))
-
 class CustomerOrder(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    customer_id = db.Column(db.Integer, db.ForeignKey('customer.id'))
+    name = db.Column(db.String(100))
+    phone_number = db.Column(db.String(20))
     item = db.Column(db.String(255), nullable=False)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     time = db.Column(db.DateTime, nullable=False)

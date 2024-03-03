@@ -3,7 +3,7 @@ from flask_login import login_user, UserMixin, LoginManager, logout_user, login_
 from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
 from flask_sqlalchemy import SQLAlchemy
-from app.models import Customer, CustomerOrder
+from app.models import CustomerOrder
 from app import db
 from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL, AFRICAS_TALKING_API_KEY, SQLALCHEMY_DATABASE_URI
 import africastalking
@@ -25,7 +25,7 @@ def load_user(user_id):
 def index():
     if not session.get('access_token'):
         return redirect('/login')
-    return "Hello World with Flask"
+    return redirect('/order')
 
 oauth = OAuth(app)
 
@@ -57,62 +57,37 @@ def logout():
     session.clear()
     return redirect('/login')
 
-
 # Initialize Africa's Talking SMS
 africastalking.initialize(username='sandbox', api_key=AFRICAS_TALKING_API_KEY)
 sms = africastalking.SMS
 
-
 @bp.route('/order')
 def show_order_form():
     return render_template('order.html')
-
-#@bp.route('/sms_callback', methods=['POST'])
-#def sms_callback():
-#    print(request.method)
-#    print(request.form)
-#    if 'from' in request.form:
-#        sender = request.form['Nickson']
-#        print(f"SMS received from: {sender}")
-#    else:
-#        print("No 'from' key found in form data")
-#    return "Success", 201
 
 @bp.route('/orders', methods=['POST'])
 def add_order():
     # Parse JSON data from the request
     data = request.json
     customer_id = data.get('customer_id')
+    name = data.get('name')
+    phone_number = data.get('phone_number')
     item = data.get('item')
     amount = data.get('amount')
     time = data.get('time')
 
-    # Validate required fields
-    if not all([customer_id, item, amount, time]):
-        return jsonify({'message': 'Missing required fields'}), 400
-
-    # Check if the customer exists
-    customer = Customer.query.get(customer_id)
-    if not customer:
-        return jsonify({'message': 'Customer not found'}), 404
-
     try:
         # Create the new order
-        new_order = CustomerOrder(customer_id=customer_id, item=item, amount=amount, time=time)
+        new_order = CustomerOrder(name=name, phone_number=phone_number, item=item, amount=amount, time=time)
         db.session.add(new_order)
         db.session.commit()
 
-        # Send SMS alert to the customer
-        phone_number = customer.phone_number
-        message = f"Hello {customer.name}, your order for {item} has been successfully placed."
-        response = africastalking.SMS.send(message, [phone_number])
-        print(response)  # Log the response from the SMS provider
+        # Send message upon successful order placement
+        message = f"Hello! New order for {item} placed successfully. Amount: {amount}. Time {time}"
+        response = sms.send(message, [phone_number])
+        print(response)
 
-        # Handle delivery reports
-        data = request.get_json(force=True)
-        print(f'Delivery report response...\n {data}')
-        
-        return jsonify({'message': 'Order added successfully, SMS sent, and delivery report handled'})
+        return jsonify({'message': 'Order added successfully'})
     except Exception as e:
-        print(f"Failed to complete order process: {e}")  # Log the error if any part fails
+        print(f"Failed to complete order process: {e}")
         return jsonify({'message': 'Failed to complete order process'}), 500
