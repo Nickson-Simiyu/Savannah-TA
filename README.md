@@ -1,11 +1,17 @@
-1. Create a simple Python or Go service
-2. Design a simple customers and orders database (keep it simple)
-3. Add a REST or GraphQL API to input / upload customers and orders:
-- Customers have simple details e.g., name and code.
-- Orders have simple details e.g., item, amount, and time.
-4. Implement authentication and authorization via OpenID Connect
-5. When an order is added, send the customer an SMS alerting them (you can use the
-Africa’s Talking SMS gateway and sandbox)
-6. Write unit tests (with coverage checking) and set up CI + automated CD. You can deploy
-to any PAAS/FAAS/IAAS of your choice
-7. Write a README for the project and host it on your GitHub
+A simple python (flask) service that has a design of (PSQL)database.
+    Customer_order
+    User
+Implemented authentication and authorization via OpenID Connect using third party Auth0. It takes in the email and password (Username-Password-Authentication) also allows google-oauth2.
+
+The app  is designed to navigate to the login page to start a session so you can make an order and a button that sends you to the home("/")page.
+
+The home page has a "/logout"(button) that clears the users session in return navigates you back to the "/login" to start the process again.
+
+The "/order" consists of a form rendered from the order.html entailing:
+    ID
+    Full Name
+    Phone Number
+    Item
+    Amount
+    Time
+Once an order is placed the customer receives an SMS alerting them on their order using the Africa's Talking SMS gateway(delivery reports).
