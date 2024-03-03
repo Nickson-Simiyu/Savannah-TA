@@ -2,10 +2,12 @@ from flask import Blueprint, redirect, request, url_for, session, jsonify, Flask
 from flask_login import login_user, UserMixin, LoginManager, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from authlib.integrations.flask_client import OAuth
+from urllib.parse import urlencode, quote_plus
+
 from flask_sqlalchemy import SQLAlchemy
 from app.models import CustomerOrder
 from app import db
-from config import AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL, AFRICAS_TALKING_API_KEY, SQLALCHEMY_DATABASE_URI
+from config import AUTH0_CLIENT_ID, AUTH0_DOMAIN, AUTH0_CLIENT_SECRET, JWKS_URI, AUTHORIZE_URL, ACCESS_TOKEN_URL, AFRICAS_TALKING_API_KEY, SQLALCHEMY_DATABASE_URI
 import africastalking
 import os
 
@@ -25,7 +27,7 @@ def load_user(user_id):
 def index():
     if not session.get('access_token'):
         return redirect('/login')
-    return redirect('/order')
+    return render_template('home.html')
 
 oauth = OAuth(app)
 
@@ -55,7 +57,7 @@ def callback():
 @bp.route('/logout')
 def logout():
     session.clear()
-    return redirect('/login')
+    return render_template('home.html')
 
 # Initialize Africa's Talking SMS
 africastalking.initialize(username='sandbox', api_key=AFRICAS_TALKING_API_KEY)
