@@ -28,11 +28,14 @@
         <input type="text" id="time" name="time" required><br><br>
 
         <input type="button" value="Place Order" onclick="submitOrder()">
+        <input type="button" value="Home" onclick="redirectToHome()">
     </form>
 
     <script>
         function submitOrder() {
             var formData = {
+                customer_id: document.getElementById("customer_id").value,
+                name: document.getElementById("name").value,
                 phone_number: document.getElementById("phone_number").value,
                 item: document.getElementById("item").value,
                 amount: document.getElementById("amount").value,
@@ -60,6 +63,11 @@
                 console.error(error);
                 alert("Failed to place order");
             });
+        }
+
+        function redirectToHome() {
+            alert("Redirecting to home page");
+            window.location.href = "/";
         }
     </script>
 </body>
